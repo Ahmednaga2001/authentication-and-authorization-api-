@@ -1,13 +1,15 @@
-require('dotenv').config()
+const path = require("path")
 
+require('dotenv').config()
 const mongoose = require("mongoose")
 const express = require("express")
 const morgan = require("morgan")
+const cookieParser = require("cookie-parser")
+
 const ApiError = require("./utils/ApiError")
 const authRoutes = require("./routes/auth")
 const userRoutes = require("./routes/user")
 const { DBConnection } = require('./configs/DB')
-const port = process.env.PORT || 5000
 const app = express()
 DBConnection()
 // Middleware
@@ -17,7 +19,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 app.use(express.json())
 app.use(express.urlencoded())
-
+app.use(cookieParser())
+app.use(express.static(path.join(__dirname,"uploads")))
 // Mount Routes
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/users', userRoutes)
@@ -34,10 +37,10 @@ app.use((err, req, res, next) => {
         message: err.message,
     })
     next()
-
+    
 })
 
-
+const port = process.env.PORT || 5000
 app.listen(port, () => {
     console.log(`App listen on port ${port}`);
 })

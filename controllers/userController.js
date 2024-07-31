@@ -1,39 +1,30 @@
 const asyncWrapper = require("../middlewares/asyncWrapper");
-const User = require("../models/user");
-const ApiError = require("../utils/ApiError");
 const bcrypt = require("bcryptjs")
+const sharp = require("sharp");
+const ApiError = require("../utils/ApiError");
 const { v4: uuidv4 } = require('uuid');
-const multer = require('multer')
+const User = require("../models/user");
+const { uploadSingleImg } = require("../middlewares/uploadImgMiddleware");
 
-// Disk Storage
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/users')
-    },
-    filename: function (req, file, cb) {
-        // user-${id}-Date.now()-extension
-        const ext = file.mimetype.split("/")[1]
-        const fileName = `user-${uuidv4()}-${Date.now()}.${ext}`
-        cb(null, fileName)
-    }
+
+// upload single image
+exports.uploadUserImg = uploadSingleImg("profileImg")
+exports.resizeImg = asyncWrapper(async (req, res, next) => {
+    const fileName = `user-${uuidv4()}-${Date.now()}`
+    await sharp(req.file.buffer)
+    .resize(600, 600)
+    .toFormat("jpeg")
+    .jpeg({ quality: 98 })
+    .toFile(`uploads/users/${fileName}.jpeg`)
+    // save image into db
+    req.body.profileImg = fileName
+    next()
 })
-function fileFilter(req, file, cb) {
 
-    if (file.mimetype.startsWith("image")) {
-        cb(null, true)
-
-    }
-    else{
-        cb(new ApiError("Only Images allowed", 400), false)
-
-    }
-
-}
-const upload = multer({ storage: storage, fileFilter })
-exports.uploadUserImg = upload.single('profileImg')
 exports.creatUser = asyncWrapper(async (req, res, next) => {
+    console.log(req.body);
     const user = await User.create(req.body)
-    console.log(user);
+    console.log("user" + user);
     return res.status(201).json({ data: user })
 })
 
@@ -65,8 +56,10 @@ exports.updateUser = asyncWrapper(async (req, res, next) => {
 })
 exports.changePassword = asyncWrapper(async (req, res, next) => {
     const user = await User.findByIdAndUpdate(req.params.id, {
-        password: await bcrypt.hash(req.body.password, 12)
-    }, { new: true })
+        password: await bcrypt.hash(req.body.password, 12),
+        passwordChangedAt : Date.now()
+    }, 
+    { new: true })
     if (!user) return next(new ApiError(`No user found for this id ${req.params.id}`), 404)
     return res.status(200).json({ data: user })
 })

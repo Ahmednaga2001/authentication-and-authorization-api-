@@ -39,7 +39,8 @@ exports.createUserValidator = [
   check('passwordConfirm')
     .notEmpty()
     .withMessage('Password confirmation required'),
-
+ check("passwordChangedAt").optional() 
+,
   check('phone')
     .optional()
     .isMobilePhone(['ar-EG', 'ar-SA'])
@@ -61,8 +62,9 @@ exports.updateUserValidator = [
   body('name')
     .optional(),
   check('email')
-    .notEmpty()
-    .withMessage('Email required')
+    // .notEmpty()
+    // .withMessage('Email required')
+    .optional()
     .isEmail()
     .withMessage('Invalid email address')
     .custom((val) =>
